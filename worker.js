@@ -38,6 +38,33 @@ const TOOLS = [
     description: "Full structured market research report: technical, on-chain, outlook (paid: $0.25 USDC via x402).",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
+  {
+    name: "scrape_url",
+    description: "Fetch any URL and return clean extracted text with title (paid: $0.005 USDC via x402).",
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string", description: "Full URL starting with http(s)://" } },
+      required: ["url"],
+    },
+  },
+  {
+    name: "fact_check",
+    description: "LLM fact-check of a claim: verdict (supported/refuted/partially_true/unverifiable), confidence, reasoning (paid: $0.02 USDC via x402).",
+    inputSchema: {
+      type: "object",
+      properties: { claim: { type: "string", description: "The claim to verify" } },
+      required: ["claim"],
+    },
+  },
+  {
+    name: "token_safety",
+    description: "EVM token rug-pull risk screening: liquidity, volume, pair age, heuristic 0-100 risk score from live DEX data (paid: $0.01 USDC via x402).",
+    inputSchema: {
+      type: "object",
+      properties: { address: { type: "string", description: "EVM token contract address 0x..." } },
+      required: ["address"],
+    },
+  },
 ];
 
 function jsonRpc(id, result) {
@@ -94,6 +121,57 @@ async function handleToolCall(env, name, args, paymentHeader) {
     case "get_research_report": {
       const r = await callUpstream(env, "/api/report", paymentHeader);
       return { content: [{ type: "text", text: r.status === 402 ? "Payment required (x402): " + r.requirements : JSON.stringify(r.data, null, 2) }], isError: !r.ok };
+    }
+    case "scrape_url": {
+      const body = JSON.stringify({ url: (args && args.url) || "" });
+      let resp;
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (paymentHeader) headers["X-PAYMENT"] = paymentHeader;
+      try {
+        resp = (env && env.X402)
+          ? await env.X402.fetch(new Request("https://x402.internal/api/scrape", { method: "POST", headers, body }))
+          : await fetch(UPSTREAM + "/api/scrape", { method: "POST", headers, body });
+      } catch (e) {
+        return { content: [{ type: "text", text: "Upstream error: " + e }], isError: true };
+      }
+      const t = await resp.text();
+      if (resp.status === 402) return { content: [{ type: "text", text: "Payment required (x402): " + (resp.headers.get("X-PAYMENT-REQUIRED") || t) }], isError: true };
+      let data; try { data = JSON.parse(t); } catch { data = { raw: t.slice(0, 2000) }; }
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], isError: !resp.ok };
+    }
+    case "fact_check": {
+      const body = JSON.stringify({ claim: (args && args.claim) || "" });
+      let resp;
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (paymentHeader) headers["X-PAYMENT"] = paymentHeader;
+      try {
+        resp = (env && env.X402)
+          ? await env.X402.fetch(new Request("https://x402.internal/api/fact-check", { method: "POST", headers, body }))
+          : await fetch(UPSTREAM + "/api/fact-check", { method: "POST", headers, body });
+      } catch (e) {
+        return { content: [{ type: "text", text: "Upstream error: " + e }], isError: true };
+      }
+      const t = await resp.text();
+      if (resp.status === 402) return { content: [{ type: "text", text: "Payment required (x402): " + (resp.headers.get("X-PAYMENT-REQUIRED") || t) }], isError: true };
+      let data; try { data = JSON.parse(t); } catch { data = { raw: t.slice(0, 2000) }; }
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], isError: !resp.ok };
+    }
+    case "token_safety": {
+      const body = JSON.stringify({ address: (args && args.address) || "" });
+      let resp;
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (paymentHeader) headers["X-PAYMENT"] = paymentHeader;
+      try {
+        resp = (env && env.X402)
+          ? await env.X402.fetch(new Request("https://x402.internal/api/token-safety", { method: "POST", headers, body }))
+          : await fetch(UPSTREAM + "/api/token-safety", { method: "POST", headers, body });
+      } catch (e) {
+        return { content: [{ type: "text", text: "Upstream error: " + e }], isError: true };
+      }
+      const t = await resp.text();
+      if (resp.status === 402) return { content: [{ type: "text", text: "Payment required (x402): " + (resp.headers.get("X-PAYMENT-REQUIRED") || t) }], isError: true };
+      let data; try { data = JSON.parse(t); } catch { data = { raw: t.slice(0, 2000) }; }
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], isError: !resp.ok };
     }
     default:
       return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
