@@ -1,10 +1,14 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.munchausen-lab/munchausen-crypto-analytics",
+  "name": "io.github.MunchausenGrup/munchausen-crypto-analytics",
   "title": "Munchausen Crypto Analytics",
-  "description": "Real-time crypto market analytics via x402 pay-per-call protocol. Free BTC/ETH/SOL prices, AI market analysis and full research reports paid per call in USDC on Base. No signup, no API keys.",
-  "version": "1.0.0",
-  "authors": [{ "name": "Munchausen Lab" }],
+  "description": "Real-time crypto analytics, web scraping, fact-checking and token safety via x402 pay-per-call. Free prices tier; paid tools in USDC on Base. No signup, no API keys.",
+  "version": "1.1.0",
+  "authors": [
+    {
+      "name": "Munchausen Lab"
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",
